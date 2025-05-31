@@ -1,0 +1,9 @@
+
+.env.producer
+.env.consumer
+
+
+__pycache__/
+*.pyc
+.vscode/
+.env

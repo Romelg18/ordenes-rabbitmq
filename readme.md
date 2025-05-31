@@ -1,81 +1,49 @@
-# Sistema de Procesamiento de Órdenes con RabbitMQ
+# Azure Service Bus con Python – Caso de uso: Sistema de Pedidos
+- Elaborado por: Romel Gualoto
+- Diseñó y arquitectura de Software
+Este proyecto implementa un **productor** y un **consumidor** de mensajes utilizando **Azure Service Bus (ESB)** en Python, como parte de un caso de uso real: **gestión de pedidos**.
 
-Este proyecto simula un sistema distribuido en el que se procesan órdenes de compra mediante un gestor de colas (RabbitMQ), utilizando dos tipos de exchanges: **direct** y **fanout**.
+Este sistema incluye:
 
----
+- `esb_producer.py`: envía un mensaje (pedido) a la cola `pedidos`.
+- `esb_consumer.py`: escucha la cola y procesa los pedidos recibidos.
 
-## ⚙️ Tecnologías utilizadas
+Se utilizan **dos archivos `.env` separados** para mantener seguras las credenciales de envío y recepción.
 
--  Python 3.x
--  RabbitMQ
-- pika (cliente AMQP para Python)
+## Configuración inicial para poder ejecutar el programa 
 
----
+### Paso 1: Instalar dependencias
 
-## Estructura del sistema
-
-ordenes-rabbitmq/
-├── producer.py # Envía órdenes a dos exchanges
-├── consumer_electronica.py # Procesa órdenes de categoría "electronica"
-├── consumer_auditor.py # Audita todas las órdenes (fanout)
-├── models/
-│ └── orden.py # Clase de modelo de orden
-├── requirements.txt
-└── README.md
-
-
----
-
-## Exchanges usados
-
-| Exchange         | Tipo     | Función                                      |
-|------------------|----------|----------------------------------------------|
-| direct_ordenes   | direct   | Enruta por categoría (ej. orden.electronica) |
-| fanout_reporte   | fanout   | Envía cada orden a todos los consumidores    |
-
----
-
-## Instalación y ejecución
-
-### 1. Instalar dependencias
 pip install -r requirements.txt
 
-### 2. Iniciar consumidores (en terminales separadas)
+### Paso 2: Crear archivos `.env`
 
-**Consumidor 1: Electrónica**
-python consumer_electronica.py
-**Consumidor 2: Auditoría**
-python consumer_auditor.py
-### 3. Ejecutar productor
+Usa las plantillas `.env.producer.example` y `.env.consumer.example` para crear:
 
----
+- `.env.producer` (con clave que tiene permiso `send`)
+- `.env.consumer` (con clave que tiene permiso `listen`)
 
-## Explicacion de que hace paso a paso 
+### `.env.producer` ejemplo (no contiene claves importantes de Azure):
 
-- El **productor** envía una orden a:
-  - Un exchange `direct` → llega a la cola específica por categoría
-  - Un exchange `fanout` → llega a todos los consumidores
+SERVICE_BUS_CONNECTION_STRING=Endpoint=sb://ordenes-esb-romel.servicebus.windows.net/;SharedAccessKeyName=sendpedidosEvents;SharedAccessKey=TU_CLAVE  
+QUEUE_NAME=pedidos
 
-- RabbitMQ enruta los mensajes según los bindings definidos
-- Los consumidores muestran la información procesada por consola
+### `.env.consumer` ejemplo (no contiene claves importantes de Azure):
 
----
+SERVICE_BUS_CONNECTION_STRING=Endpoint=sb://ordenes-esb-romel.servicebus.windows.net/;SharedAccessKeyName=listenpedidosEvents;SharedAccessKey=TU_CLAVE  
+QUEUE_NAME=pedidos
 
-## Autores
+##  Ejecución del programa
 
-- Romel Gualoto  
-- William Ramirez 
+### Ejecutar el productor
 
-Ambos integrantes participaron con commits identificables en el repositorio.
+python esb_producer.py
 
----
+Esto enviará un pedido simulado a la cola.
 
-## Pasos para Visualización en RabbitMQ
+### Ejecutar el consumidor
 
-- Ingresar al panel en [http://localhost:15672](http://localhost:15672)
-- Usuario: `guest` | Contraseña: `guest`
-- Ver en pestañas:
-  - **Exchanges**: `direct_ordenes`, `fanout_reporte`
-  - **Queues**: `cola_electronica`, `cola_auditoria`
-  - **Bindings** y mensajes en tiempo real
+python esb_consumer.py
+
+Esto recibirá el mensaje desde la cola y lo mostrará en consola.
 
