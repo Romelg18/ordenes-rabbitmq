@@ -1,9 +1,16 @@
-import pika
+from azure.servicebus import ServiceBusClient
 import json
+import os
 from models.order_tracking import OrdenTracking
+from dotenv import load_dotenv
+load_dotenv()
 
-def callback(ch, method, properties, body):
-    data = json.loads(body)
+
+CONNECTION_STR = os.getenv("AZURE_SERVICEBUS_CONNECTION_LISTEN")
+QUEUE_NAME = "items"
+
+def callback(msg):
+    data = json.loads(str(msg))
     tracking = OrdenTracking(
         cliente=data['cliente'],
         producto=data['producto'],
@@ -13,17 +20,12 @@ def callback(ch, method, properties, body):
     print("🚚 Seguimiento de Orden:")
     print(tracking.__dict__)
 
-    # Guardar en archivo 
     with open("tracking_log.txt", "a") as archivo:
         archivo.write(tracking.to_json() + "\n")
 
-conexion = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-canal = conexion.channel()
-
-canal.exchange_declare(exchange='fanout_reporte', exchange_type='fanout')
-canal.queue_declare(queue='cola_tracking')
-canal.queue_bind(exchange='fanout_reporte', queue='cola_tracking')
-
-canal.basic_consume(queue='cola_tracking', on_message_callback=callback, auto_ack=True)
-print("📦 Esperando órdenes para seguimiento...")
-canal.start_consuming()
+with ServiceBusClient.from_connection_string(CONNECTION_STR) as client:
+    receiver = client.get_queue_receiver(queue_name=QUEUE_NAME)
+    with receiver:
+        for msg in receiver:
+            callback(msg)
+            receiver.complete_message(msg)
