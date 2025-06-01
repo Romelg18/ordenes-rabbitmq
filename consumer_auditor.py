@@ -1,20 +1,22 @@
-import pika
+from azure.servicebus import ServiceBusClient
 import json
+import os
 
-def callback(ch, method, properties, body):
-    orden = json.loads(body)
-    print(" Auditoría recibió orden:")
+from dotenv import load_dotenv
+load_dotenv()
+
+
+CONNECTION_STR = os.getenv("AZURE_SERVICEBUS_CONNECTION_LISTEN")
+QUEUE_NAME = "items"
+
+def callback(msg):
+    orden = json.loads(str(msg))
+    print("Auditoría recibió orden:")
     print(orden)
 
-# Conectar
-conexion = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-canal = conexion.channel()
-
-# Crear exchange fanout y cola auditoría
-canal.exchange_declare(exchange='fanout_reporte', exchange_type='fanout')
-canal.queue_declare(queue='cola_auditoria')
-canal.queue_bind(exchange='fanout_reporte', queue='cola_auditoria')
-
-canal.basic_consume(queue='cola_auditoria', on_message_callback=callback, auto_ack=True)
-print("Auditor escuchando todas las órdenes...")
-canal.start_consuming()
+with ServiceBusClient.from_connection_string(CONNECTION_STR) as client:
+    receiver = client.get_queue_receiver(queue_name=QUEUE_NAME)
+    with receiver:
+        for msg in receiver:
+            callback(msg)
+            receiver.complete_message(msg)
